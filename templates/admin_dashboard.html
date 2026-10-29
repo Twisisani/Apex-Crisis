@@ -1,0 +1,102 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="space-y-6">
+    <!-- Admin Metrics Row -->
+    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        <div class="bg-slate-900 border border-slate-800 rounded-2xl p-5 shadow-xl">
+            <span class="text-xs uppercase text-slate-400 font-medium">Registered Citizens</span>
+            <p class="text-2xl font-mono font-bold text-white mt-1">{{ stats.total_users }}</p>
+        </div>
+        <div class="bg-slate-900 border border-slate-800 rounded-2xl p-5 shadow-xl">
+            <span class="text-xs uppercase text-slate-400 font-medium">Total Cases</span>
+            <p class="text-2xl font-mono font-bold text-emerald-400 mt-1">{{ stats.total_cases }}</p>
+        </div>
+        <div class="bg-slate-900 border border-slate-800 rounded-2xl p-5 shadow-xl">
+            <span class="text-xs uppercase text-slate-400 font-medium">Active / Pending Review</span>
+            <p class="text-2xl font-mono font-bold text-amber-400 mt-1">{{ stats.pending_cases }}</p>
+        </div>
+        <div class="bg-slate-900 border border-slate-800 rounded-2xl p-5 shadow-xl">
+            <span class="text-xs uppercase text-slate-400 font-medium">Resolved Cases</span>
+            <p class="text-2xl font-mono font-bold text-blue-400 mt-1">{{ stats.resolved_cases }}</p>
+        </div>
+    </div>
+
+    <!-- Core Admin Command Table -->
+    <div class="bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-xl">
+        <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
+            <div>
+                <h2 class="text-lg font-bold text-white">National Crisis Dispatch Command Center</h2>
+                <p class="text-xs text-slate-400">Manage case lifecycle, assign verified partners, track acknowledgements, and enforce accountability.</p>
+            </div>
+
+            <!-- Category Filter Bar -->
+            <div class="flex items-center gap-1.5 bg-slate-950 p-1.5 rounded-xl border border-slate-800 text-xs">
+                <span class="text-slate-400 px-2 font-medium">Filter:</span>
+                <a href="{{ url_for('admin_dashboard', category='ALL') }}" class="px-3 py-1 rounded-lg font-semibold transition {% if selected_cat == 'ALL' %}bg-emerald-500 text-slate-950{% else %}text-slate-300 hover:text-white{% endif %}">All</a>
+                <a href="{{ url_for('admin_dashboard', category='EMPLOYMENT') }}" class="px-3 py-1 rounded-lg font-semibold transition {% if selected_cat == 'EMPLOYMENT' %}bg-emerald-500 text-slate-950{% else %}text-slate-300 hover:text-white{% endif %}">Jobs</a>
+                <a href="{{ url_for('admin_dashboard', category='GBV_ALERT') }}" class="px-3 py-1 rounded-lg font-semibold transition {% if selected_cat == 'GBV_ALERT' %}bg-emerald-500 text-slate-950{% else %}text-slate-300 hover:text-white{% endif %}">GBV</a>
+                <a href="{{ url_for('admin_dashboard', category='EL_NINO_RELIEF') }}" class="px-3 py-1 rounded-lg font-semibold transition {% if selected_cat == 'EL_NINO_RELIEF' %}bg-emerald-500 text-slate-950{% else %}text-slate-300 hover:text-white{% endif %}">El Nino Relief</a>
+            </div>
+        </div>
+
+        <div class="overflow-x-auto">
+            <table class="w-full text-left text-xs text-slate-300">
+                <thead class="bg-slate-950 text-slate-400 uppercase font-mono tracking-wider">
+                    <tr>
+                        <th class="p-3.5">ID / Region</th>
+                        <th class="p-3.5">Category</th>
+                        <th class="p-3.5">Case Details</th>
+                        <th class="p-3.5">Assigned Partner</th>
+                        <th class="p-3.5">Status</th>
+                        <th class="p-3.5">Lifecycle Control & Actions</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-slate-800">
+                    {% if records|length == 0 %}
+                    <tr>
+                        <td colspan="6" class="p-6 text-center text-slate-500 italic">No crisis records found for the selected filter.</td>
+                    </tr>
+                    {% else %}
+                    {% for r in records %}
+                    <tr class="hover:bg-slate-950/50 transition">
+                        <td class="p-3.5 font-mono">
+                            <span class="font-bold text-white">#{{ r.id }}</span>
+                            <span class="block text-[10px] text-emerald-400">{{ r.aws_region }}</span>
+                        </td>
+                        <td class="p-3.5 font-semibold text-emerald-400 font-mono">{{ r.category }}</td>
+                        <td class="p-3.5 font-medium text-slate-200 max-w-xs truncate">{{ r.details }}</td>
+                        <td class="p-3.5 text-slate-300">{{ r.assigned_partner }}</td>
+                        <td class="p-3.5">
+                            <span class="px-2.5 py-1 rounded-lg font-mono text-[11px] font-semibold {% if r.status == 'RESOLVED' %}bg-emerald-500/15 text-emerald-300 border border-emerald-500/30{% else %}bg-amber-500/15 text-amber-300 border border-amber-500/30{% endif %}">
+                                {{ r.status }}
+                            </span>
+                        </td>
+                        <td class="p-3.5">
+                            <form method="POST" action="{{ url_for('update_status', record_id=r.id) }}" class="space-y-2 bg-slate-950 p-3 rounded-xl border border-slate-800">
+                                <div class="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                                    <select name="status" class="bg-slate-900 border border-slate-800 rounded px-2 py-1 text-white text-[11px]">
+                                        <option value="SUBMITTED" {% if r.status=='SUBMITTED' %}selected{% endif %}>SUBMITTED</option>
+                                        <option value="UNDER REVIEW" {% if r.status=='UNDER REVIEW' %}selected{% endif %}>UNDER REVIEW</option>
+                                        <option value="ASSIGNED" {% if r.status=='ASSIGNED' %}selected{% endif %}>ASSIGNED</option>
+                                        <option value="ACKNOWLEDGED" {% if r.status=='ACKNOWLEDGED' %}selected{% endif %}>ACKNOWLEDGED</option>
+                                        <option value="IN PROGRESS" {% if r.status=='IN PROGRESS' %}selected{% endif %}>IN PROGRESS</option>
+                                        <option value="RESOLVED" {% if r.status=='RESOLVED' %}selected{% endif %}>RESOLVED</option>
+                                    </select>
+                                    <input type="text" name="assigned_partner" value="{{ r.assigned_partner }}" placeholder="Partner NGO / Employer" class="bg-slate-900 border border-slate-800 rounded px-2 py-1 text-white text-[11px]">
+                                    <input type="text" name="next_action" value="{{ r.next_action }}" placeholder="Next step / Action note" class="bg-slate-900 border border-slate-800 rounded px-2 py-1 text-white text-[11px]">
+                                </div>
+                                <div class="flex justify-between items-center pt-1">
+                                    <input type="text" name="reason" placeholder="Audit reason for update..." required class="bg-slate-900 border border-slate-800 rounded px-2 py-1 text-white text-[10px] w-3/4">
+                                    <button type="submit" class="px-3 py-1 bg-blue-600 hover:bg-blue-500 text-white rounded font-bold text-[11px] transition">Update Lifecycle</button>
+                                </div>
+                            </form>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                    {% endif %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}
